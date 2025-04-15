@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Table, Tag, Spin, Typography, Alert } from 'antd';
 import { ShoppingCartOutlined, UserOutlined, DollarOutlined, InboxOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 import api from '../services/api';
+import SafeChart from '../components/SafeChart';
+import { registerChartJS } from '../chartConfig'; // Import hàm đăng ký
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+// Đăng ký chart.js
+registerChartJS();
 
 const { Title: TitleText } = Typography;
 
@@ -22,37 +24,145 @@ const Dashboard = () => {
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [salesData, setSalesData] = useState(null);
+  const [salesData, setSalesData] = useState({
+    labels: ['Không có dữ liệu'],
+    datasets: [{
+      label: 'Doanh thu',
+      data: [0],
+      backgroundColor: 'rgba(75, 192, 192, 0.6)',
+      borderColor: 'rgba(75, 192, 192, 1)',
+      tension: 0.4,
+      fill: true,
+      pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+      pointBorderColor: '#fff',
+      pointRadius: 5,
+    }]
+  });
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
+  // Sửa phần fetchDashboardData
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       
-      // Gọi API lấy dữ liệu Dashboard
-      const response = await api.get('/dashboard');
-      const data = response.data;
+      // Lấy dữ liệu thống kê
+      const ordersResponse = await api.get('/orders');
+      const snacksResponse = await api.get('/snacks');
+      const orders = ordersResponse.data;
+      const snacks = snacksResponse.data;
+      
+      // Tính toán thống kê
+      const totalSales = orders.reduce((sum, order) => sum + (order.finalTotal || order.total), 0);
+      const totalOrders = orders.length;
+      const totalProducts = snacks.length;
       
       setStats({
-        totalSales: data.summary.totalSales,
-        totalOrders: data.summary.totalOrders,
-        totalProducts: data.summary.totalProducts,
-        totalCustomers: data.summary.totalCustomers
+        totalSales,
+        totalOrders,
+        totalProducts,
+        totalCustomers: 0 // Cần API riêng cho khách hàng
       });
       
-      setRecentOrders(data.recentOrders);
-      setLowStockProducts(data.lowStockProducts);
-      setSalesData(data.salesData);
+      // Lấy đơn hàng gần đây
+      const recentOrdersData = orders
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5)
+        .map(order => ({
+          id: order._id,
+          customer: order.userName || 'Khách hàng',
+          date: new Date(order.createdAt).toLocaleDateString('vi-VN'),
+          total: order.finalTotal || order.total,
+          status: order.status.toLowerCase()
+        }));
+      
+      setRecentOrders(recentOrdersData);
+      
+      // Lấy sản phẩm sắp hết hàng
+      const lowStockProductsData = snacks
+        .filter(snack => snack.stock <= 10)
+        .sort((a, b) => a.stock - b.stock)
+        .slice(0, 5)
+        .map(snack => ({
+          id: snack._id,
+          name: snack.snackName,
+          category: getCategoryName(snack.categoryId),
+          stock: snack.stock
+        }));
+      
+      setLowStockProducts(lowStockProductsData);
+      
+      // Create simplified sales data
+      const salesByMonth = {};
+      orders.forEach(order => {
+        const month = new Date(order.createdAt).getMonth();
+        const year = new Date(order.createdAt).getFullYear();
+        const key = `${year}-${month}`;
+        if (!salesByMonth[key]) {
+          salesByMonth[key] = 0;
+        }
+        salesByMonth[key] += (order.finalTotal || order.total);
+      });
+      
+      const labels = Object.keys(salesByMonth).map(key => {
+        const [year, month] = key.split('-');
+        return `${parseInt(month) + 1}/${year}`;
+      });
+      
+      const data = Object.values(salesByMonth);
+      
+      // Nếu không có dữ liệu hoặc dữ liệu rỗng, sử dụng dữ liệu mặc định
+      if (!data || data.length === 0) {
+        setSalesData({
+          labels: ['Không có dữ liệu'],
+          datasets: [{
+            label: 'Doanh thu',
+            data: [0],
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+          }]
+        });
+        return;
+      }
+      
+      // Xử lý dữ liệu hợp lệ
+      setSalesData({
+        labels,
+        datasets: [{
+          label: 'Doanh thu (VNĐ)',
+          data,
+          backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        }]
+      });
       
       setLoading(false);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError('Không thể tải dữ liệu tổng quan');
       setLoading(false);
+      // Sử dụng dữ liệu mặc định trong trường hợp lỗi
+      setSalesData({
+        labels: ['Lỗi dữ liệu'],
+        datasets: [{
+          label: 'Doanh thu',
+          data: [0],
+          backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        }]
+      });
     }
+  };
+
+  // Helper function to convert category ID to name
+  const getCategoryName = (categoryId) => {
+    const categoriesMap = {
+      'banh': 'Bánh',
+      'keo': 'Kẹo',
+      'do_kho': 'Đồ khô',
+      'mut': 'Mứt',
+      'hat': 'Hạt'
+    };
+    return categoriesMap[categoryId] || categoryId;
   };
 
   const orderColumns = [
@@ -186,7 +296,12 @@ const Dashboard = () => {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col span={24}>
           <Card title="Biểu đồ doanh thu">
-            <Bar options={chartOptions} data={salesData} height={80} />
+            <SafeChart 
+              chartType="line" 
+              data={salesData} 
+              options={chartOptions} 
+              height={300}
+            />
           </Card>
         </Col>
       </Row>

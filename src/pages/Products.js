@@ -36,9 +36,22 @@ const Products = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/products');
-      setProducts(response.data);
-      setFilteredProducts(response.data);
+      const response = await api.get('/snacks');
+      // Transform data to match the expected format in component
+      const formattedProducts = response.data.map(snack => ({
+        id: snack._id,
+        name: snack.snackName,
+        price: snack.price,
+        realPrice: snack.realPrice,
+        image: snack.images && snack.images.length > 0 ? snack.images[0] : 'https://via.placeholder.com/80',
+        category: snack.categoryId,
+        stock: snack.stock,
+        status: snack.stock > 0 ? 'active' : 'inactive',
+        description: snack.description,
+        discount: snack.discount
+      }));
+      setProducts(formattedProducts);
+      setFilteredProducts(formattedProducts);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching products:', err);
@@ -49,8 +62,15 @@ const Products = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await api.get('/categories');
-      setCategories(response.data);
+      // Danh sách category cố định từ model
+      const categoriesMap = {
+        'banh': 'Bánh',
+        'keo': 'Kẹo',
+        'do_kho': 'Đồ khô',
+        'mut': 'Mứt',
+        'hat': 'Hạt'
+      };
+      setCategories(Object.keys(categoriesMap));
     } catch (err) {
       console.error('Error fetching categories:', err);
       message.error('Không thể tải danh mục sản phẩm');
@@ -92,12 +112,12 @@ const Products = () => {
 
   const handleDeleteProduct = async (id) => {
     try {
-      await api.delete(`/products/${id}`);
+      await api.delete(`/snacks/${id}`);
       message.success('Xóa sản phẩm thành công');
       fetchProducts(); // Tải lại danh sách sau khi xóa
     } catch (err) {
       console.error('Error deleting product:', err);
-      message.error('Không thể xóa sản phẩm');
+      message.error('Không thể xóa sản phẩm: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -123,7 +143,19 @@ const Products = () => {
       title: 'Giá',
       dataIndex: 'price',
       key: 'price',
-      render: price => `${price.toLocaleString()}đ`,
+      render: (price, record) => (
+        <div>
+          {record.discount > 0 ? (
+            <>
+              <div style={{ textDecoration: 'line-through', color: '#999' }}>{price.toLocaleString()}đ</div>
+              <div style={{ color: '#ff4d4f', fontWeight: 'bold' }}>{record.realPrice.toLocaleString()}đ</div>
+              <Tag color="red">-{record.discount}%</Tag>
+            </>
+          ) : (
+            `${price.toLocaleString()}đ`
+          )}
+        </div>
+      ),
       sorter: (a, b) => a.price - b.price,
     },
     {

@@ -10,6 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
+import api from '../services/api'; // Thêm import api
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -36,77 +37,20 @@ const Orders = () => {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      // Mock data for demonstration
-      setTimeout(() => {
-        const mockOrders = [
-          { 
-            id: 'ORD001', 
-            customer: 'Nguyễn Văn A', 
-            phone: '0901234567',
-            date: '2025-04-10', 
-            total: 250000, 
-            status: 'completed',
-            items: 3
-          },
-          { 
-            id: 'ORD002', 
-            customer: 'Trần Thị B', 
-            phone: '0912345678',
-            date: '2025-04-11', 
-            total: 180000, 
-            status: 'processing',
-            items: 2
-          },
-          { 
-            id: 'ORD003', 
-            customer: 'Lê Văn C', 
-            phone: '0823456789',
-            date: '2025-04-12', 
-            total: 325000, 
-            status: 'pending',
-            items: 4
-          },
-          { 
-            id: 'ORD004', 
-            customer: 'Phạm Thị D', 
-            phone: '0934567890',
-            date: '2025-04-12', 
-            total: 140000, 
-            status: 'completed',
-            items: 1
-          },
-          { 
-            id: 'ORD005', 
-            customer: 'Hoàng Văn E', 
-            phone: '0845678901',
-            date: '2025-04-13', 
-            total: 195000, 
-            status: 'cancelled',
-            items: 2
-          },
-          { 
-            id: 'ORD006', 
-            customer: 'Đỗ Thị F', 
-            phone: '0956789012',
-            date: '2025-04-14', 
-            total: 230000, 
-            status: 'processing',
-            items: 3
-          },
-          { 
-            id: 'ORD007', 
-            customer: 'Vũ Văn G', 
-            phone: '0967890123',
-            date: '2025-04-14', 
-            total: 285000, 
-            status: 'pending',
-            items: 3
-          },
-        ];
-        setOrders(mockOrders);
-        setFilteredOrders(mockOrders);
-        setLoading(false);
-      }, 1000);
+      const response = await api.get('/orders');
+      // Transform data to match the expected format in component
+      const formattedOrders = response.data.map(order => ({
+        id: order._id,
+        customer: order.userName || 'Khách hàng',
+        phone: order.phoneNumber || 'N/A',
+        date: order.createdAt,
+        total: order.finalTotal || order.total,
+        status: order.status.toLowerCase(),
+        items: order.items.length
+      }));
+      setOrders(formattedOrders);
+      setFilteredOrders(formattedOrders);
+      setLoading(false);
     } catch (err) {
       console.error('Error fetching orders:', err);
       message.error('Không thể tải danh sách đơn hàng');

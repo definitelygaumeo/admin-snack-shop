@@ -10,6 +10,8 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import moment from 'moment';
+// Thêm import api
+import api from '../services/api';
 
 const { Title, Text } = Typography;
 const { Step } = Steps;
@@ -31,40 +33,43 @@ const OrderDetail = () => {
   const fetchOrderDetails = async () => {
     setLoading(true);
     try {
-      // Mock data for demonstration
-      setTimeout(() => {
-        const mockOrder = {
-          id: id,
-          date: '2025-04-12',
-          status: 'processing',
-          customer: {
-            name: 'Trần Thị B',
-            phone: '0912345678',
-            email: 'trantb@example.com',
-            address: '123 Nguyễn Huệ, Quận 1, TP.HCM'
-          },
-          paymentMethod: 'COD',
-          paymentStatus: 'pending',
-          shippingFee: 15000,
-          subtotal: 165000,
-          total: 180000,
-          notes: 'Giao hàng trong giờ hành chính',
-          statusHistory: [
-            { status: 'pending', date: '2025-04-12 09:23:15', text: 'Đơn hàng đã được tạo' },
-            { status: 'processing', date: '2025-04-12 10:45:30', text: 'Đơn hàng đang được xử lý' }
-          ],
-          items: [
-            { id: 1, name: 'Bánh quy socola', price: 25000, quantity: 2, total: 50000, image: 'https://via.placeholder.com/80' },
-            { id: 2, name: 'Khoai tây chiên', price: 15000, quantity: 3, total: 45000, image: 'https://via.placeholder.com/80' },
-            { id: 3, name: 'Nước ngọt Coca', price: 12000, quantity: 2, total: 24000, image: 'https://via.placeholder.com/80' },
-            { id: 4, name: 'Snack bim bim', price: 10000, quantity: 2, total: 20000, image: 'https://via.placeholder.com/80' },
-            { id: 6, name: 'Trà sữa trân châu', price: 26000, quantity: 1, total: 26000, image: 'https://via.placeholder.com/80' }
-          ]
-        };
-        
-        setOrder(mockOrder);
-        setLoading(false);
-      }, 1000);
+      const response = await api.get(`/orders/${id}`);
+      const orderData = response.data;
+      
+      // Transform data to match the expected format in component
+      const formattedOrder = {
+        id: orderData._id,
+        date: orderData.createdAt,
+        status: orderData.status.toLowerCase(),
+        customer: {
+          name: orderData.userName || 'Khách hàng',
+          phone: orderData.phoneNumber || 'N/A',
+          email: orderData.email || 'N/A',
+          address: orderData.shippingAddress || 'N/A'
+        },
+        paymentMethod: orderData.paymentMethod || 'COD',
+        paymentStatus: orderData.paymentStatus || 'pending',
+        shippingFee: orderData.shippingFee || 0,
+        subtotal: orderData.total - (orderData.shippingFee || 0),
+        total: orderData.finalTotal || orderData.total,
+        notes: orderData.notes || '',
+        statusHistory: orderData.statusHistory || [{
+          status: orderData.status.toLowerCase(),
+          date: orderData.createdAt,
+          text: `Đơn hàng ${orderData.status.toLowerCase() === 'pending' ? 'đã được tạo' : 'đang được xử lý'}`
+        }],
+        items: orderData.items.map(item => ({
+          id: item.snackId._id || item.snackId,
+          name: item.snackName || 'Sản phẩm',
+          price: item.price,
+          quantity: item.quantity,
+          total: item.price * item.quantity,
+          image: item.image || 'https://via.placeholder.com/80'
+        }))
+      };
+      
+      setOrder(formattedOrder);
+      setLoading(false);
     } catch (err) {
       console.error('Error fetching order details:', err);
       message.error('Không thể tải thông tin đơn hàng');
@@ -103,38 +108,37 @@ const OrderDetail = () => {
   const updateOrderStatus = async () => {
     setLoading(true);
     try {
-      // In real app, this would call an API to update the order status
-      setTimeout(() => {
-        // Add new status to history
-        const now = moment().format('YYYY-MM-DD HH:mm:ss');
-        let statusText = '';
-        
-        switch (newStatus) {
-          case 'pending': statusText = 'Đơn hàng đã được tạo'; break;
-          case 'processing': statusText = 'Đơn hàng đang được xử lý'; break;
-          case 'shipping': statusText = 'Đơn hàng đang được giao'; break;
-          case 'completed': statusText = 'Đơn hàng đã hoàn thành'; break;
-          case 'cancelled': statusText = 'Đơn hàng đã bị hủy'; break;
-          default: statusText = 'Cập nhật trạng thái đơn hàng';
-        }
-        
-        const updatedOrder = {
-          ...order,
-          status: newStatus,
-          statusHistory: [
-            ...order.statusHistory,
-            { status: newStatus, date: now, text: statusText }
-          ]
-        };
-        
-        setOrder(updatedOrder);
-        setIsStatusModalVisible(false);
-        setLoading(false);
-        message.success('Cập nhật trạng thái đơn hàng thành công');
-      }, 1000);
+      await api.put(`/orders/${id}/status`, { status: newStatus.toUpperCase() });
+      
+      // Add new status to history
+      const now = moment().format('YYYY-MM-DD HH:mm:ss');
+      let statusText = '';
+      
+      switch (newStatus) {
+        case 'pending': statusText = 'Đơn hàng đã được tạo'; break;
+        case 'processing': statusText = 'Đơn hàng đang được xử lý'; break;
+        case 'shipping': statusText = 'Đơn hàng đang được giao'; break;
+        case 'completed': statusText = 'Đơn hàng đã hoàn thành'; break;
+        case 'cancelled': statusText = 'Đơn hàng đã bị hủy'; break;
+        default: statusText = 'Cập nhật trạng thái đơn hàng';
+      }
+      
+      const updatedOrder = {
+        ...order,
+        status: newStatus,
+        statusHistory: [
+          ...order.statusHistory,
+          { status: newStatus, date: now, text: statusText }
+        ]
+      };
+      
+      setOrder(updatedOrder);
+      setIsStatusModalVisible(false);
+      setLoading(false);
+      message.success('Cập nhật trạng thái đơn hàng thành công');
     } catch (err) {
       console.error('Error updating order status:', err);
-      message.error('Không thể cập nhật trạng thái đơn hàng');
+      message.error('Không thể cập nhật trạng thái đơn hàng: ' + (err.response?.data?.message || err.message));
       setLoading(false);
     }
   };

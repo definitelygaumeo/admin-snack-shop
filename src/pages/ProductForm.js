@@ -46,19 +46,22 @@ const ProductForm = () => {
   const fetchProductDetails = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`/products/${id}`);
+      const response = await api.get(`/snacks/${id}`);
       const productData = response.data;
       
       form.setFieldsValue({
-        name: productData.name,
+        name: productData.snackName,
         price: productData.price,
-        category: productData.category,
+        category: productData.categoryId,
         stock: productData.stock,
         description: productData.description,
-        status: productData.status === 'active',
+        discount: productData.discount || 0,
+        status: productData.stock > 0,
       });
       
-      setImageUrl(productData.image);
+      if (productData.images && productData.images.length > 0) {
+        setImageUrl(productData.images[0]);
+      }
       setLoading(false);
     } catch (err) {
       console.error('Error fetching product details:', err);
@@ -70,25 +73,29 @@ const ProductForm = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      // Prepare data
+      // Prepare data to match backend model
       const productData = {
-        ...values,
-        status: values.status ? 'active' : 'inactive',
-        image: imageUrl,
+        snackName: values.name,
+        description: values.description,
+        price: values.price,
+        stock: values.stock,
+        categoryId: values.category,
+        discount: values.discount || 0,
+        images: imageUrl ? [imageUrl] : []
       };
       
       if (isEditing) {
-        await api.put(`/products/${id}`, productData);
+        await api.put(`/snacks/${id}`, productData);
         message.success('Cập nhật sản phẩm thành công');
       } else {
-        await api.post('/products', productData);
+        await api.post('/snacks', productData);
         message.success('Thêm sản phẩm thành công');
       }
       
       navigate('/products');
     } catch (err) {
       console.error('Error saving product:', err);
-      message.error('Không thể lưu sản phẩm');
+      message.error('Không thể lưu sản phẩm: ' + (err.response?.data?.message || err.message));
       setLoading(false);
     }
   };
@@ -183,6 +190,17 @@ const ProductForm = () => {
                     rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}
                   >
                     <InputNumber min={0} style={{ width: '100%' }} placeholder="Nhập số lượng" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item
+                    name="discount"
+                    label="Giảm giá (%)"
+                  >
+                    <InputNumber min={0} max={100} style={{ width: '100%' }} placeholder="Nhập % giảm giá" />
                   </Form.Item>
                 </Col>
               </Row>
