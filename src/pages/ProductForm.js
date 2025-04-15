@@ -35,12 +35,8 @@ const ProductForm = () => {
 
   const fetchCategories = async () => {
     try {
-      // Use this for actual API integration
-      // const response = await api.get('/categories');
-      // setCategories(response.data);
-      
-      // Mock data for demonstration
-      setCategories(['Bánh ngọt', 'Đồ ăn mặn', 'Đồ uống', 'Bánh mì']);
+      const response = await api.get('/categories');
+      setCategories(response.data);
     } catch (err) {
       console.error('Error fetching categories:', err);
       message.error('Không thể tải danh mục sản phẩm');
@@ -50,35 +46,20 @@ const ProductForm = () => {
   const fetchProductDetails = async () => {
     setLoading(true);
     try {
-      // Use this for actual API integration
-      // const response = await api.get(`/products/${id}`);
-      // const productData = response.data;
+      const response = await api.get(`/products/${id}`);
+      const productData = response.data;
       
-      // Mock data for demonstration
-      setTimeout(() => {
-        const productData = {
-          id: id,
-          name: 'Bánh quy socola',
-          price: 25000,
-          category: 'Bánh ngọt',
-          stock: 35,
-          description: 'Bánh quy socola thơm ngon, giòn tan',
-          status: true,
-          image: 'https://via.placeholder.com/300',
-        };
-        
-        form.setFieldsValue({
-          name: productData.name,
-          price: productData.price,
-          category: productData.category,
-          stock: productData.stock,
-          description: productData.description,
-          status: productData.status,
-        });
-        
-        setImageUrl(productData.image);
-        setLoading(false);
-      }, 1000);
+      form.setFieldsValue({
+        name: productData.name,
+        price: productData.price,
+        category: productData.category,
+        stock: productData.stock,
+        description: productData.description,
+        status: productData.status === 'active',
+      });
+      
+      setImageUrl(productData.image);
+      setLoading(false);
     } catch (err) {
       console.error('Error fetching product details:', err);
       message.error('Không thể tải thông tin sản phẩm');
@@ -92,22 +73,15 @@ const ProductForm = () => {
       // Prepare data
       const productData = {
         ...values,
-        image: imageUrl || 'https://via.placeholder.com/300', // Default image if none is uploaded
+        status: values.status ? 'active' : 'inactive',
+        image: imageUrl,
       };
       
       if (isEditing) {
-        // Use this for actual API integration
-        // await api.put(`/products/${id}`, productData);
-        
-        // Mock implementation
-        console.log('Updating product', id, productData);
+        await api.put(`/products/${id}`, productData);
         message.success('Cập nhật sản phẩm thành công');
       } else {
-        // Use this for actual API integration
-        // await api.post('/products', productData);
-        
-        // Mock implementation
-        console.log('Creating product', productData);
+        await api.post('/products', productData);
         message.success('Thêm sản phẩm thành công');
       }
       
@@ -119,33 +93,27 @@ const ProductForm = () => {
     }
   };
 
-  const handleImageUpload = (info) => {
-    if (info.file.status === 'done') {
-      // When using actual API
-      // setImageUrl(info.file.response.url);
-      
-      // Mock implementation
-      getBase64(info.file.originFileObj, url => {
-        setImageUrl(url);
+  const handleImageUpload = async (options) => {
+    const { file, onSuccess, onError } = options;
+    
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    try {
+      const response = await api.post('/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
+      
+      setImageUrl(response.data.url);
+      onSuccess('ok');
       message.success('Tải ảnh lên thành công');
-    } else if (info.file.status === 'error') {
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      onError('Tải ảnh lên thất bại');
       message.error('Tải ảnh lên thất bại');
     }
-  };
-
-  // Helper function to convert file to base64
-  const getBase64 = (file, callback) => {
-    const reader = new FileReader();
-    reader.addEventListener('load', () => callback(reader.result));
-    reader.readAsDataURL(file);
-  };
-
-  // Mock implementation for file upload
-  const customUploadRequest = ({ onSuccess }) => {
-    setTimeout(() => {
-      onSuccess("ok");
-    }, 1000);
   };
 
   const handleCancel = () => {
@@ -245,8 +213,7 @@ const ProductForm = () => {
                   <Upload
                     listType="picture"
                     showUploadList={false}
-                    customRequest={customUploadRequest}
-                    onChange={handleImageUpload}
+                    customRequest={handleImageUpload}
                   >
                     <Button icon={<UploadOutlined />}>Tải ảnh lên</Button>
                   </Upload>

@@ -36,26 +36,10 @@ const Products = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      // Use this for actual API integration
-      // const response = await api.get('/products');
-      // setProducts(response.data);
-      
-      // Mock data for demonstration
-      setTimeout(() => {
-        const mockProducts = [
-          { id: 1, name: 'Bánh quy socola', price: 25000, category: 'Bánh ngọt', stock: 35, status: 'active', image: 'https://via.placeholder.com/100' },
-          { id: 2, name: 'Khoai tây chiên', price: 15000, category: 'Đồ ăn mặn', stock: 50, status: 'active', image: 'https://via.placeholder.com/100' },
-          { id: 3, name: 'Nước ngọt Coca', price: 12000, category: 'Đồ uống', stock: 78, status: 'active', image: 'https://via.placeholder.com/100' },
-          { id: 4, name: 'Bánh mì que', price: 8000, category: 'Bánh mì', stock: 42, status: 'active', image: 'https://via.placeholder.com/100' },
-          { id: 5, name: 'Snack bim bim', price: 10000, category: 'Đồ ăn mặn', stock: 65, status: 'active', image: 'https://via.placeholder.com/100' },
-          { id: 6, name: 'Trà sữa trân châu', price: 28000, category: 'Đồ uống', stock: 30, status: 'active', image: 'https://via.placeholder.com/100' },
-          { id: 7, name: 'Bánh Donut', price: 22000, category: 'Bánh ngọt', stock: 25, status: 'inactive', image: 'https://via.placeholder.com/100' },
-          { id: 8, name: 'Snack rong biển', price: 14000, category: 'Đồ ăn mặn', stock: 48, status: 'active', image: 'https://via.placeholder.com/100' },
-        ];
-        setProducts(mockProducts);
-        setFilteredProducts(mockProducts);
-        setLoading(false);
-      }, 1000);
+      const response = await api.get('/products');
+      setProducts(response.data);
+      setFilteredProducts(response.data);
+      setLoading(false);
     } catch (err) {
       console.error('Error fetching products:', err);
       message.error('Không thể tải danh sách sản phẩm');
@@ -65,12 +49,8 @@ const Products = () => {
 
   const fetchCategories = async () => {
     try {
-      // Use this for actual API integration
-      // const response = await api.get('/categories');
-      // setCategories(response.data);
-      
-      // Mock data for demonstration
-      setCategories(['Bánh ngọt', 'Đồ ăn mặn', 'Đồ uống', 'Bánh mì']);
+      const response = await api.get('/categories');
+      setCategories(response.data);
     } catch (err) {
       console.error('Error fetching categories:', err);
       message.error('Không thể tải danh mục sản phẩm');
@@ -112,12 +92,9 @@ const Products = () => {
 
   const handleDeleteProduct = async (id) => {
     try {
-      // Use this for actual API integration
-      // await api.delete(`/products/${id}`);
-      
-      // Mock implementation
-      setProducts(prevProducts => prevProducts.filter(product => product.id !== id));
+      await api.delete(`/products/${id}`);
       message.success('Xóa sản phẩm thành công');
+      fetchProducts(); // Tải lại danh sách sau khi xóa
     } catch (err) {
       console.error('Error deleting product:', err);
       message.error('Không thể xóa sản phẩm');

@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { Bar, Line, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, registerables } from 'chart.js';
 import moment from 'moment';
+import api from '../services/api';
 
 ChartJS.register(...registerables);
 
@@ -38,118 +39,44 @@ const Reports = () => {
   const fetchReportData = async () => {
     setLoading(true);
     try {
-      // Mock data for demonstration
-      setTimeout(() => {
-        // Sales Data
-        const salesData = {
-          summary: {
-            totalSales: 15800000,
-            totalOrders: 124,
-            averageOrderValue: 127419,
-            comparisonPercentage: 12.5
-          },
-          dailySales: [
-            { date: '2025-03-16', sales: 580000, orders: 5 },
-            { date: '2025-03-17', sales: 720000, orders: 6 },
-            { date: '2025-03-18', sales: 450000, orders: 4 },
-            { date: '2025-03-19', sales: 620000, orders: 5 },
-            { date: '2025-03-20', sales: 530000, orders: 4 },
-            { date: '2025-03-21', sales: 810000, orders: 7 },
-            { date: '2025-03-22', sales: 920000, orders: 8 },
-            { date: '2025-03-23', sales: 750000, orders: 6 },
-            { date: '2025-03-24', sales: 680000, orders: 5 },
-            { date: '2025-03-25', sales: 540000, orders: 4 },
-            { date: '2025-03-26', sales: 490000, orders: 4 },
-            { date: '2025-03-27', sales: 650000, orders: 5 },
-            { date: '2025-03-28', sales: 720000, orders: 6 },
-            { date: '2025-03-29', sales: 830000, orders: 7 },
-            { date: '2025-03-30', sales: 780000, orders: 6 },
-            { date: '2025-03-31', sales: 690000, orders: 5 },
-            { date: '2025-04-01', sales: 570000, orders: 5 },
-            { date: '2025-04-02', sales: 630000, orders: 5 },
-            { date: '2025-04-03', sales: 710000, orders: 6 },
-            { date: '2025-04-04', sales: 590000, orders: 5 },
-            { date: '2025-04-05', sales: 850000, orders: 7 },
-            { date: '2025-04-06', sales: 920000, orders: 8 },
-            { date: '2025-04-07', sales: 750000, orders: 6 },
-            { date: '2025-04-08', sales: 680000, orders: 5 },
-            { date: '2025-04-09', sales: 720000, orders: 6 },
-            { date: '2025-04-10', sales: 640000, orders: 5 },
-            { date: '2025-04-11', sales: 580000, orders: 5 },
-            { date: '2025-04-12', sales: 710000, orders: 6 },
-            { date: '2025-04-13', sales: 890000, orders: 7 },
-            { date: '2025-04-14', sales: 740000, orders: 6 },
-          ],
-          topProducts: [
-            { id: 1, name: 'Bánh quy socola', sales: 2500000, quantity: 100, percentage: 15.8 },
-            { id: 2, name: 'Khoai tây chiên', sales: 1850000, quantity: 123, percentage: 11.7 },
-            { id: 3, name: 'Nước ngọt Coca', sales: 1680000, quantity: 140, percentage: 10.6 },
-            { id: 4, name: 'Bánh mì que', sales: 1320000, quantity: 165, percentage: 8.4 },
-            { id: 5, name: 'Snack bim bim', sales: 1250000, quantity: 125, percentage: 7.9 },
-          ],
-          salesByCategory: [
-            { category: 'Bánh ngọt', sales: 4800000, percentage: 30.4 },
-            { category: 'Đồ ăn mặn', sales: 4200000, percentage: 26.6 },
-            { category: 'Đồ uống', sales: 3700000, percentage: 23.4 },
-            { category: 'Bánh mì', sales: 1600000, percentage: 10.1 },
-            { category: 'Khác', sales: 1500000, percentage: 9.5 },
-          ]
+      let endpoint = '';
+      let params = {};
+      
+      // Xác định endpoint và tham số dựa trên tab đang chọn
+      if (activeTab === 'sales') {
+        endpoint = '/reports/sales';
+        params = {
+          startDate: dateRange[0].format('YYYY-MM-DD'),
+          endDate: dateRange[1].format('YYYY-MM-DD')
         };
-
-        // Products Data
-        const productsData = {
-          summary: {
-            totalProducts: 48,
-            lowStockProducts: 8,
-            outOfStockProducts: 2,
-            newProducts: 5
-          },
-          topSelling: [
-            { id: 1, name: 'Bánh quy socola', sales: 2500000, quantity: 100 },
-            { id: 2, name: 'Khoai tây chiên', sales: 1850000, quantity: 123 },
-            { id: 3, name: 'Nước ngọt Coca', sales: 1680000, quantity: 140 },
-            { id: 4, name: 'Bánh mì que', sales: 1320000, quantity: 165 },
-            { id: 5, name: 'Snack bim bim', sales: 1250000, quantity: 125 },
-          ],
-          lowStock: [
-            { id: 1, name: 'Bánh quy socola', stock: 5, category: 'Bánh ngọt' },
-            { id: 2, name: 'Nước ngọt Coca', stock: 8, category: 'Đồ uống' },
-            { id: 3, name: 'Bánh Donut', stock: 3, category: 'Bánh ngọt' },
-            { id: 4, name: 'Trà sữa trân châu', stock: 7, category: 'Đồ uống' },
-          ]
-        };
-
-        // Customers Data
-        const customersData = {
-          summary: {
-            totalCustomers: 210,
-            newCustomers: 15,
-            returningCustomers: 195,
-            averagePurchaseValue: 127419
-          },
-          topCustomers: [
-            { id: 1, name: 'Nguyễn Văn A', orders: 5, spent: 875000 },
-            { id: 2, name: 'Trần Thị B', orders: 4, spent: 720000 },
-            { id: 3, name: 'Lê Văn C', orders: 3, spent: 580000 },
-            { id: 4, name: 'Phạm Thị D', orders: 3, spent: 540000 },
-            { id: 5, name: 'Hoàng Văn E', orders: 2, spent: 420000 },
-          ],
-          customerGrowth: [
-            { month: 'T1/2025', customers: 150 },
-            { month: 'T2/2025', customers: 165 },
-            { month: 'T3/2025', customers: 185 },
-            { month: 'T4/2025', customers: 210 },
-          ]
-        };
-
+      } else if (activeTab === 'products') {
+        endpoint = '/reports/products';
+        params = { timeRange: productTimeRange };
+      } else if (activeTab === 'customers') {
+        endpoint = '/reports/customers';
+      }
+      
+      const response = await api.get(endpoint, { params });
+      
+      // Cập nhật state với dữ liệu từ API
+      if (activeTab === 'sales') {
         setReportData({
-          sales: salesData,
-          products: productsData,
-          customers: customersData
+          ...reportData,
+          sales: response.data
         });
-
-        setLoading(false);
-      }, 1000);
+      } else if (activeTab === 'products') {
+        setReportData({
+          ...reportData,
+          products: response.data
+        });
+      } else if (activeTab === 'customers') {
+        setReportData({
+          ...reportData,
+          customers: response.data
+        });
+      }
+      
+      setLoading(false);
     } catch (err) {
       console.error('Error fetching report data:', err);
       message.error('Không thể tải dữ liệu báo cáo');
@@ -169,8 +96,44 @@ const Reports = () => {
     setProductTimeRange(value);
   };
 
-  const exportReport = () => {
-    message.success('Xuất báo cáo thành công');
+  const exportReport = async () => {
+    try {
+      let endpoint = '';
+      let params = {};
+      
+      if (activeTab === 'sales') {
+        endpoint = '/reports/sales/export';
+        params = {
+          startDate: dateRange[0].format('YYYY-MM-DD'),
+          endDate: dateRange[1].format('YYYY-MM-DD')
+        };
+      } else if (activeTab === 'products') {
+        endpoint = '/reports/products/export';
+        params = { timeRange: productTimeRange };
+      } else if (activeTab === 'customers') {
+        endpoint = '/reports/customers/export';
+      }
+      
+      // Download file từ API
+      const response = await api.get(endpoint, { 
+        params, 
+        responseType: 'blob' 
+      });
+      
+      // Tạo URL cho file download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${activeTab}_report.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      message.success('Xuất báo cáo thành công');
+    } catch (err) {
+      console.error('Error exporting report:', err);
+      message.error('Không thể xuất báo cáo');
+    }
   };
 
   const renderSalesReport = () => {

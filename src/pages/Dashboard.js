@@ -22,48 +22,38 @@ const Dashboard = () => {
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [salesData, setSalesData] = useState(null);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        // Mock data - replace with actual API calls
-        // const response = await api.get('/dashboard');
-        
-        // Mock data for demonstration
-        setTimeout(() => {
-          setStats({
-            totalSales: 15800000,
-            totalOrders: 124,
-            totalProducts: 48,
-            totalCustomers: 210
-          });
-          
-          setRecentOrders([
-            { id: '1001', customer: 'Nguyễn Văn A', date: '2025-04-12', total: 250000, status: 'completed' },
-            { id: '1002', customer: 'Trần Thị B', date: '2025-04-13', total: 180000, status: 'processing' },
-            { id: '1003', customer: 'Lê Văn C', date: '2025-04-13', total: 325000, status: 'pending' },
-            { id: '1004', customer: 'Phạm Thị D', date: '2025-04-14', total: 140000, status: 'completed' },
-          ]);
-          
-          setLowStockProducts([
-            { id: 1, name: 'Khoai tây chiên', stock: 5, category: 'Đồ ăn mặn' },
-            { id: 2, name: 'Nước ngọt Coca', stock: 8, category: 'Đồ uống' },
-            { id: 3, name: 'Bánh quy socola', stock: 3, category: 'Bánh ngọt' },
-          ]);
-          
-          setLoading(false);
-        }, 1000);
-        
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('Không thể tải dữ liệu tổng quan');
-        setLoading(false);
-      }
-    };
-
     fetchDashboardData();
   }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Gọi API lấy dữ liệu Dashboard
+      const response = await api.get('/dashboard');
+      const data = response.data;
+      
+      setStats({
+        totalSales: data.summary.totalSales,
+        totalOrders: data.summary.totalOrders,
+        totalProducts: data.summary.totalProducts,
+        totalCustomers: data.summary.totalCustomers
+      });
+      
+      setRecentOrders(data.recentOrders);
+      setLowStockProducts(data.lowStockProducts);
+      setSalesData(data.salesData);
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Không thể tải dữ liệu tổng quan');
+      setLoading(false);
+    }
+  };
 
   const orderColumns = [
     {
@@ -126,17 +116,6 @@ const Dashboard = () => {
       render: (stock) => <Tag color={stock <= 5 ? 'red' : 'orange'}>{stock}</Tag>,
     },
   ];
-
-  const salesData = {
-    labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
-    datasets: [
-      {
-        label: 'Doanh thu (triệu VNĐ)',
-        data: [12.5, 14.2, 11.8, 13.5, 16.2, 14.8, 15.9, 17.2, 18.5, 16.8, 17.5, 15.8],
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-      },
-    ],
-  };
 
   const chartOptions = {
     responsive: true,

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-// import api from '../services/api'; // Tạm thời comment lại
+import api from '../services/api';
 
 export const AuthContext = createContext();
 
@@ -12,21 +12,22 @@ export const AuthProvider = ({ children }) => {
     // Check if user is already logged in
     const token = localStorage.getItem('token');
     if (token) {
-      // Thay vì gọi API, chúng ta sẽ set một user giả lập
-      setUser({ name: 'Admin', email: 'admin@snackshop.com' });
-      setLoading(false);
+      fetchUserProfile();
     } else {
       setLoading(false);
     }
   }, []);
 
-  // Thay thế bằng phiên bản giả lập để development
   const fetchUserProfile = async () => {
-    // Simulate API call
-    setTimeout(() => {
-      setUser({ name: 'Admin', email: 'admin@snackshop.com' });
+    try {
+      const response = await api.get('/auth/profile');
+      setUser(response.data);
       setLoading(false);
-    }, 500);
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+      localStorage.removeItem('token');
+      setLoading(false);
+    }
   };
 
   const login = async (username, password) => {
@@ -34,28 +35,28 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      // Kiểm tra thông tin đăng nhập trực tiếp
-      if (username === 'admin' && password === 'admin') {
-        // Giả lập API thành công
-        localStorage.setItem('token', 'mock-jwt-token-for-admin');
-        await fetchUserProfile();
-        return true;
-      } else {
-        // Giả lập API thất bại
-        setError('Tên đăng nhập hoặc mật khẩu không đúng');
-        setLoading(false);
-        return false;
-      }
+      // Kết nối với API thực tế
+      const response = await api.post('/auth/login', { username, password });
+      localStorage.setItem('token', response.data.token);
+      await fetchUserProfile();
+      return true;
     } catch (err) {
-      setError('Đăng nhập thất bại');
+      setError(err.response?.data?.message || 'Đăng nhập thất bại');
       setLoading(false);
       return false;
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
+  const logout = async () => {
+    try {
+      // Gọi API logout nếu backend yêu cầu
+      await api.post('/auth/logout');
+    } catch (err) {
+      console.error('Error during logout:', err);
+    } finally {
+      localStorage.removeItem('token');
+      setUser(null);
+    }
   };
 
   return (

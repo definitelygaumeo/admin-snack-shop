@@ -13,6 +13,11 @@ import MainLayout from './components/layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import ProductForm from './pages/ProductForm';
+import Orders from './pages/Orders';
+import OrderDetail from './pages/OrderDetail';
+import Customers from './pages/Customers';
+import Reports from './pages/Reports';
+import Settings from './pages/Settings';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -42,6 +47,11 @@ function App() {
               <Route path="/products" element={<Products />} />
               <Route path="/products/add" element={<ProductForm />} />
               <Route path="/products/edit/:id" element={<ProductForm />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/orders/:id" element={<OrderDetail />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/settings" element={<Settings />} />
             </Route>
           </Routes>
         </Router>
